@@ -2,22 +2,53 @@
   "use strict";
 
   const app = document.getElementById("app");
-  const KEY = "mindfuel-v5";
+
+  if (!app) {
+    document.body.innerHTML =
+      "<h2 style='padding:30px'>MindFuel: app container not found.</h2>";
+    return;
+  }
+
+  const STORAGE_KEY = "mindfuel-final-v1";
+
+  /* -------------------------
+     SAVED USER STATE
+  ------------------------- */
+
   let saved = {};
 
   try {
-    saved = JSON.parse(localStorage.getItem(KEY) || "{}");
-  } catch (_) {}
+    saved = JSON.parse(
+      localStorage.getItem(STORAGE_KEY) || "{}"
+    );
+  } catch (e) {
+    saved = {};
+  }
 
   const state = {
     xp: Number(saved.xp || 0),
-    history: Array.isArray(saved.history) ? saved.history : [],
-    bookmarks: Array.isArray(saved.bookmarks) ? saved.bookmarks : [],
-    wordIndex: Number.isInteger(saved.wordIndex) ? saved.wordIndex : 0,
+    history: Array.isArray(saved.history)
+      ? saved.history
+      : [],
+    bookmarks: Array.isArray(saved.bookmarks)
+      ? saved.bookmarks
+      : [],
+    wordIndex: Number.isInteger(saved.wordIndex)
+      ? saved.wordIndex
+      : 0,
     name: saved.name || "Neha"
   };
 
-  const save = () => localStorage.setItem(KEY, JSON.stringify(state));
+  function save() {
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify(state)
+    );
+  }
+
+  /* -------------------------
+     IMAGE ASSETS
+  ------------------------- */
 
   const screens = {
     splash: "splash.jpg",
@@ -33,312 +64,453 @@
     result: "result.jpg"
   };
 
-  function toast(text) {
-    document.querySelectorAll(".mf-toast").forEach(e => e.remove());
+  /* -------------------------
+     HELPERS
+  ------------------------- */
 
-    const t = document.createElement("div");
-    t.className = "mf-toast";
-    t.textContent = text;
-
-    document.body.appendChild(t);
-
-    requestAnimationFrame(() => t.classList.add("show"));
-
-    setTimeout(() => t.remove(), 1500);
-  }
-
-  function clear() {
+  function clearApp() {
     app.innerHTML = "";
   }
 
-  function imageScreen(file, label = "") {
-    clear();
+  function toast(message) {
+    document
+      .querySelectorAll(".mf-toast")
+      .forEach(el => el.remove());
+
+    const t = document.createElement("div");
+    t.className = "mf-toast";
+    t.textContent = message;
+
+    document.body.appendChild(t);
+
+    requestAnimationFrame(() => {
+      t.classList.add("show");
+    });
+
+    setTimeout(() => {
+      t.remove();
+    }, 1600);
+  }
+
+  function imageScreen(file, title) {
+    clearApp();
 
     const page = document.createElement("main");
+
     page.className = "screen";
-    page.setAttribute("aria-label", label);
+    page.setAttribute("aria-label", title || "MindFuel");
 
-    const img = document.createElement("img");
+    const image = document.createElement("img");
 
-    img.className = "screen-image";
-    img.src = file;
-    img.alt = label;
-    img.draggable = false;
+    image.className = "screen-image";
+    image.src = file;
+    image.alt = title || "MindFuel";
+    image.draggable = false;
 
-    img.onerror = () => {
-      page.classList.add("asset-error");
-
+    image.onerror = () => {
       page.innerHTML = `
-        <div class="fallback">
-          <h1>MindFuel</h1>
-          <p>Unable to load ${file}</p>
+        <div style="
+          width:100%;
+          height:100%;
+          display:flex;
+          align-items:center;
+          justify-content:center;
+          background:#f6f3ff;
+          color:#24125f;
+          text-align:center;
+          padding:30px;
+        ">
+          <div>
+            <h1>MindFuel</h1>
+            <p>Unable to load ${file}</p>
+          </div>
         </div>
       `;
     };
 
-    page.appendChild(img);
+    page.appendChild(image);
     app.appendChild(page);
 
     return page;
   }
 
-  function hit(page, className, label, x, y, w, h, action) {
-    const b = document.createElement("button");
+  function hit(
+    page,
+    label,
+    x,
+    y,
+    width,
+    height,
+    action,
+    className = ""
+  ) {
+    const button = document.createElement("button");
 
-    b.className = `hit ${className || ""}`;
-    b.setAttribute("aria-label", label);
+    button.className = `hit ${className}`;
 
-    b.style.left = x + "%";
-    b.style.top = y + "%";
-    b.style.width = w + "%";
-    b.style.height = h + "%";
+    button.setAttribute(
+      "aria-label",
+      label
+    );
 
-    b.onclick = action;
+    button.style.left = `${x}%`;
+    button.style.top = `${y}%`;
+    button.style.width = `${width}%`;
+    button.style.height = `${height}%`;
 
-    page.appendChild(b);
+    button.addEventListener(
+      "click",
+      event => {
+        event.preventDefault();
+        event.stopPropagation();
 
-    return b;
+        if (typeof action === "function") {
+          action();
+        }
+      }
+    );
+
+    page.appendChild(button);
+
+    return button;
   }
+
+  /* -------------------------
+     BOTTOM NAVIGATION
+  ------------------------- */
 
   function bottomNav(page) {
-    hit(page, "", "Home", 0, 90.5, 25, 9, home);
-    hit(page, "", "Play Quiz", 25, 90.5, 25, 9, quiz);
-    hit(page, "", "English Lab", 50, 90.5, 25, 9, words);
-    hit(page, "", "Menu", 75, 90.5, 25, 9, drawer);
-  }
-
-  function splash() {
-    const p = imageScreen(
-      screens.splash,
-      "MindFuel welcome"
-    );
-
     hit(
-      p,
-      "",
-      "Let's Begin",
-      11,
-      78,
-      78,
-      12,
+      page,
+      "Home",
+      0,
+      89.5,
+      25,
+      10,
       home
     );
-  }
-
-  function home() {
-    const p = imageScreen(
-      screens.home,
-      "MindFuel home"
-    );
 
     hit(
-      p,
-      "",
-      "Open menu",
-      4,
-      3.5,
-      14,
-      8,
-      drawer
-    );
-
-    hit(
-      p,
-      "",
-      "Profile",
-      86,
-      3,
-      11,
-      8,
-      () => toast(state.name)
-    );
-
-    hit(
-      p,
-      "",
-      "Start Brain Challenge",
-      5,
-      31,
-      90,
-      23,
+      page,
+      "Play Quiz",
+      25,
+      89.5,
+      25,
+      10,
       quiz
     );
 
     hit(
-      p,
-      "",
+      page,
+      "English Lab",
+      50,
+      89.5,
+      25,
+      10,
+      englishLab
+    );
+
+    hit(
+      page,
+      "Menu",
+      75,
+      89.5,
+      25,
+      10,
+      drawer
+    );
+  }
+
+  /* -------------------------
+     SPLASH
+  ------------------------- */
+
+  function splash() {
+    const page = imageScreen(
+      screens.splash,
+      "MindFuel Welcome"
+    );
+
+    hit(
+      page,
+      "Let's Begin",
+      8,
+      76,
+      84,
+      14,
+      home
+    );
+  }
+
+  /* -------------------------
+     HOME
+  ------------------------- */
+
+  function home() {
+    const page = imageScreen(
+      screens.home,
+      "MindFuel Home"
+    );
+
+    /* Menu */
+    hit(
+      page,
+      "Open Menu",
+      2,
+      2,
+      16,
+      9,
+      drawer
+    );
+
+    /* Profile */
+    hit(
+      page,
+      "Profile",
+      84,
+      2,
+      14,
+      9,
+      () => {
+        toast(state.name);
+      }
+    );
+
+    /* Brain Challenge */
+    hit(
+      page,
+      "Start Brain Challenge",
+      4,
+      30,
+      92,
+      25,
+      quiz
+    );
+
+    /* HR Radar */
+    hit(
+      page,
       "HR Radar",
-      5,
-      55,
-      44,
-      13,
+      4,
+      54,
+      46,
+      14,
       hr
     );
 
+    /* English Lab */
     hit(
-      p,
-      "",
+      page,
       "English Lab",
-      51,
-      55,
-      44,
-      13,
-      words
+      50,
+      54,
+      46,
+      14,
+      englishLab
     );
 
+    /* India Now */
     hit(
-      p,
-      "",
+      page,
       "India Now",
-      5,
-      68,
-      44,
-      13,
+      4,
+      67,
+      46,
+      14,
       india
     );
 
+    /* World Now */
     hit(
-      p,
-      "",
+      page,
       "World Now",
-      51,
-      68,
-      44,
-      13,
+      50,
+      67,
+      46,
+      14,
       world
     );
 
+    /* Inspiration / progress area */
     hit(
-      p,
-      "",
+      page,
       "My Progress",
-      5,
-      81,
-      44,
+      4,
+      80,
+      92,
       9,
       progress
     );
 
-    bottomNav(p);
+    bottomNav(page);
   }
 
+  /* -------------------------
+     QUIZ DATA
+  ------------------------- */
+
   const questions = [
-    [
-      "Which skill is most useful for solving a new problem?",
-      [
+    {
+      question:
+        "Which skill is most useful for solving a new problem?",
+      options: [
         "Critical thinking",
         "Guessing",
         "Ignoring details",
         "Avoiding questions"
       ],
-      0
-    ],
-    [
-      "What does HRBP stand for?",
-      [
+      correct: 0
+    },
+
+    {
+      question:
+        "What does HRBP stand for?",
+      options: [
         "Human Resources Business Partner",
         "Human Retail Business Plan",
         "Hiring Role Business Process",
         "Human Relations Benefit Policy"
       ],
-      0
-    ],
-    [
-      "Which habit best improves vocabulary?",
-      [
+      correct: 0
+    },
+
+    {
+      question:
+        "Which habit best improves vocabulary?",
+      options: [
         "Learning and using new words",
         "Never reading",
         "Repeating one word",
         "Skipping examples"
       ],
-      0
-    ],
-    [
-      "Which approach helps you learn consistently?",
-      [
+      correct: 0
+    },
+
+    {
+      question:
+        "Which approach helps you learn consistently?",
+      options: [
         "Small daily practice",
         "Studying once a month",
         "Avoiding revision",
         "Waiting for motivation"
       ],
-      0
-    ],
-    [
-      "Which behaviour supports good teamwork?",
-      [
+      correct: 0
+    },
+
+    {
+      question:
+        "Which behaviour supports good teamwork?",
+      options: [
         "Active listening",
         "Ignoring others",
         "Avoiding feedback",
         "Keeping information to yourself"
       ],
-      0
-    ],
-    [
-      "What helps you remember a new concept?",
-      [
+      correct: 0
+    },
+
+    {
+      question:
+        "What helps you remember a new concept?",
+      options: [
         "Connect it to an example",
         "Read it once only",
         "Avoid practice",
         "Ignore context"
       ],
-      0
-    ],
-    [
-      "Which is a useful workplace skill?",
-      [
+      correct: 0
+    },
+
+    {
+      question:
+        "Which is a useful workplace skill?",
+      options: [
         "Clear communication",
         "Avoiding feedback",
         "Guessing expectations",
         "Ignoring priorities"
       ],
-      0
-    ],
-    [
-      "What is a good way to build a habit?",
-      [
+      correct: 0
+    },
+
+    {
+      question:
+        "What is a good way to build a habit?",
+      options: [
         "Start small and repeat",
         "Do everything once",
         "Wait for motivation",
         "Change the goal daily"
       ],
-      0
-    ]
+      correct: 0
+    },
+
+    {
+      question:
+        "Which action improves learning?",
+      options: [
+        "Practice regularly",
+        "Avoid questions",
+        "Never revise",
+        "Ignore mistakes"
+      ],
+      correct: 0
+    },
+
+    {
+      question:
+        "What is a strong learning mindset?",
+      options: [
+        "Stay curious",
+        "Avoid challenges",
+        "Never ask why",
+        "Give up quickly"
+      ],
+      correct: 0
+    }
   ];
 
   let currentQuestion = 0;
 
+  /* -------------------------
+     QUIZ
+  ------------------------- */
+
   function quiz() {
-    const p = imageScreen(
+    const page = imageScreen(
       screens.quiz,
-      "Brain Challenge"
+      "Play Quiz"
     );
 
-    const card = document.createElement("section");
+    const card =
+      document.createElement("section");
 
     card.className = "quiz-card";
 
-    p.appendChild(card);
+    page.appendChild(card);
 
     renderQuiz(card);
 
     hit(
-      p,
-      "back-hit",
-      "Back to home",
+      page,
+      "Back",
       0,
       2,
       15,
       8,
-      home
+      home,
+      "back-hit"
     );
 
-    bottomNav(p);
+    bottomNav(page);
   }
 
   function renderQuiz(card) {
     const q =
       questions[
-        currentQuestion % questions.length
+        currentQuestion %
+          questions.length
       ];
 
     card.innerHTML = `
@@ -346,25 +518,32 @@
         Question ${currentQuestion + 1}/${questions.length}
       </div>
 
-      <h2>${q[0]}</h2>
+      <h2>${q.question}</h2>
 
       <div class="answers">
-        ${q[1]
+        ${q.options
           .map(
-            (a, i) => `
+            (option, index) => `
               <button
                 class="answer"
-                data-i="${i}"
+                data-index="${index}"
               >
-                <span>${String.fromCharCode(65 + i)}</span>
-                ${a}
+                <span>
+                  ${String.fromCharCode(
+                    65 + index
+                  )}
+                </span>
+                ${option}
               </button>
             `
           )
           .join("")}
       </div>
 
-      <button class="next-btn" id="next">
+      <button
+        class="next-btn"
+        id="nextQuestion"
+      >
         Next →
       </button>
     `;
@@ -373,86 +552,168 @@
 
     card
       .querySelectorAll(".answer")
-      .forEach(btn => {
-        btn.onclick = () => {
-          if (answered) return;
+      .forEach(button => {
+        button.addEventListener(
+          "click",
+          () => {
+            if (answered) return;
 
-          answered = true;
+            answered = true;
 
-          const correct =
-            Number(btn.dataset.i) === q[2];
+            const selected =
+              Number(
+                button.dataset.index
+              );
 
-          btn.classList.add(
-            correct ? "correct" : "wrong"
-          );
+            const correct =
+              selected === q.correct;
 
-          if (correct) {
-            state.xp += 10;
-            toast("+10 XP");
-          } else {
-            toast("Keep learning!");
+            button.classList.add(
+              correct
+                ? "correct"
+                : "wrong"
+            );
+
+            if (correct) {
+              state.xp += 10;
+              toast("+10 XP 🎉");
+            } else {
+              toast(
+                "Keep learning! 💜"
+              );
+
+              const correctButton =
+                card.querySelector(
+                  `[data-index="${q.correct}"]`
+                );
+
+              if (correctButton) {
+                correctButton.classList.add(
+                  "correct"
+                );
+              }
+            }
+
+            state.history.push({
+              question: q.question,
+              correct,
+              date:
+                new Date().toISOString()
+            });
+
+            save();
           }
-
-          state.history.push({
-            question: q[0],
-            correct,
-            date: new Date().toISOString()
-          });
-
-          save();
-        };
+        );
       });
 
-    card.querySelector("#next").onclick = () => {
-      currentQuestion =
-        (currentQuestion + 1) %
-        questions.length;
+    card
+      .querySelector("#nextQuestion")
+      .addEventListener(
+        "click",
+        () => {
+          currentQuestion =
+            (currentQuestion + 1) %
+            questions.length;
 
-      renderQuiz(card);
-    };
+          renderQuiz(card);
+        }
+      );
   }
 
-  const words = [
-    [
-      "Insightful",
-      "Having or showing deep understanding and clear perception.",
-      "Her insightful analysis helped the team solve the problem quickly.",
-      "Perceptive • Thoughtful • Illuminating"
-    ],
-    [
-      "Resilient",
-      "Able to recover quickly from difficulty.",
-      "She remained resilient through the change.",
-      "Strong • Adaptable • Enduring"
-    ],
-    [
-      "Curious",
-      "Eager to know or learn something.",
-      "A curious mind keeps growing.",
-      "Inquisitive • Interested • Eager"
-    ],
-    [
-      "Articulate",
-      "Able to express ideas clearly and effectively.",
-      "He was articulate during the presentation.",
-      "Eloquent • Expressive • Clear"
-    ],
-    [
-      "Adaptable",
-      "Able to adjust to new conditions.",
-      "An adaptable learner welcomes change.",
-      "Flexible • Versatile • Adjustable"
-    ],
-    [
-      "Meticulous",
-      "Very careful and precise.",
-      "She was meticulous while checking the report.",
-      "Careful • Thorough • Precise"
-    ]
+  /* -------------------------
+     ENGLISH LAB DATA
+     IMPORTANT:
+     Named wordList — NOT words
+  ------------------------- */
+
+  const wordList = [
+    {
+      word: "Insightful",
+      meaning:
+        "Having or showing deep understanding and clear perception.",
+      example:
+        "Her insightful analysis helped the team solve the problem quickly.",
+      synonyms:
+        "Perceptive • Thoughtful • Illuminating"
+    },
+
+    {
+      word: "Resilient",
+      meaning:
+        "Able to recover quickly from difficulty.",
+      example:
+        "She remained resilient through the change.",
+      synonyms:
+        "Strong • Adaptable • Enduring"
+    },
+
+    {
+      word: "Curious",
+      meaning:
+        "Eager to know or learn something.",
+      example:
+        "A curious mind keeps growing.",
+      synonyms:
+        "Inquisitive • Interested • Eager"
+    },
+
+    {
+      word: "Articulate",
+      meaning:
+        "Able to express ideas clearly and effectively.",
+      example:
+        "He was articulate during the presentation.",
+      synonyms:
+        "Eloquent • Expressive • Clear"
+    },
+
+    {
+      word: "Adaptable",
+      meaning:
+        "Able to adjust to new conditions.",
+      example:
+        "An adaptable learner welcomes change.",
+      synonyms:
+        "Flexible • Versatile • Adjustable"
+    },
+
+    {
+      word: "Meticulous",
+      meaning:
+        "Very careful and precise.",
+      example:
+        "She was meticulous while checking the report.",
+      synonyms:
+        "Careful • Thorough • Precise"
+    },
+
+    {
+      word: "Empathy",
+      meaning:
+        "The ability to understand and share another person's feelings.",
+      example:
+        "Empathy helps create stronger workplace relationships.",
+      synonyms:
+        "Understanding • Compassion • Sensitivity"
+    },
+
+    {
+      word: "Proactive",
+      meaning:
+        "Taking action before a problem or situation requires it.",
+      example:
+        "She took a proactive approach to solving the issue.",
+      synonyms:
+        "Initiative • Prepared • Forward-thinking"
+    }
   ];
 
-  function words() {
-    const p = imageScreen(
+  /* -------------------------
+     ENGLISH LAB
+  ------------------------- */
+
+  function englishLab() {
+    const page = imageScreen(
       screens.english,
       "English Lab"
     );
@@ -462,149 +723,199 @@
 
     card.className = "word-card";
 
-    p.appendChild(card);
+    page.appendChild(card);
 
     renderWord(card);
 
     hit(
-      p,
-      "back-hit",
-      "Back to home",
+      page,
+      "Back",
       0,
       2,
       15,
       8,
-      home
+      home,
+      "back-hit"
     );
 
-    bottomNav(p);
+    bottomNav(page);
   }
 
   function renderWord(card) {
-    const w =
-      words[state.wordIndex % words.length];
+    const word =
+      wordList[
+        state.wordIndex %
+          wordList.length
+      ];
 
-    const bookmarked =
-      state.bookmarks.includes(w[0]);
+    const isBookmarked =
+      state.bookmarks.includes(
+        word.word
+      );
 
     card.innerHTML = `
       <div class="word-label">
         WORD OF THE DAY
       </div>
 
-      <h1>${w[0]}</h1>
+      <h1>${word.word}</h1>
 
       <p>
         <b>Meaning</b><br>
-        ${w[1]}
+        ${word.meaning}
       </p>
 
       <p>
         <b>Example</b><br>
-        ${w[2]}
+        ${word.example}
       </p>
 
       <p>
         <b>Synonyms</b><br>
-        ${w[3]}
+        ${word.synonyms}
       </p>
 
       <div class="word-actions">
-        <button id="prev">
+
+        <button id="previousWord">
           ‹ Previous
         </button>
 
-        <button id="nextword">
-          Next Word ›
+        <button id="nextWord">
+          New Word →
         </button>
+
       </div>
 
-      <button class="bookmark" id="bookmark">
+      <button
+        class="bookmark"
+        id="bookmarkWord"
+      >
         ${
-          bookmarked
+          isBookmarked
             ? "★ Bookmarked"
             : "☆ Bookmark Word"
         }
       </button>
     `;
 
-    card.querySelector("#prev").onclick =
-      () => {
-        state.wordIndex =
-          (state.wordIndex - 1 + words.length) %
-          words.length;
+    /* PREVIOUS WORD */
 
-        save();
-        renderWord(card);
-      };
+    card
+      .querySelector("#previousWord")
+      .addEventListener(
+        "click",
+        () => {
+          state.wordIndex =
+            (state.wordIndex -
+              1 +
+              wordList.length) %
+            wordList.length;
 
-    card.querySelector("#nextword").onclick =
-      () => {
-        state.wordIndex =
-          (state.wordIndex + 1) %
-          words.length;
+          save();
 
-        save();
-        renderWord(card);
+          renderWord(card);
 
-        toast("New word loaded");
-      };
-
-    card.querySelector("#bookmark").onclick =
-      () => {
-        if (bookmarked) {
-          state.bookmarks =
-            state.bookmarks.filter(
-              x => x !== w[0]
-            );
-        } else {
-          state.bookmarks.push(w[0]);
+          toast(
+            "Previous word"
+          );
         }
+      );
 
-        save();
-        renderWord(card);
+    /* NEW WORD */
 
-        toast(
-          bookmarked
-            ? "Bookmark removed"
-            : "Word bookmarked"
-        );
-      };
+    card
+      .querySelector("#nextWord")
+      .addEventListener(
+        "click",
+        () => {
+          state.wordIndex =
+            (state.wordIndex + 1) %
+            wordList.length;
+
+          save();
+
+          renderWord(card);
+
+          toast(
+            "New word loaded ✨"
+          );
+        }
+      );
+
+    /* BOOKMARK */
+
+    card
+      .querySelector("#bookmarkWord")
+      .addEventListener(
+        "click",
+        () => {
+          if (isBookmarked) {
+            state.bookmarks =
+              state.bookmarks.filter(
+                item =>
+                  item !== word.word
+              );
+
+            toast(
+              "Bookmark removed"
+            );
+          } else {
+            state.bookmarks.push(
+              word.word
+            );
+
+            toast(
+              "Word bookmarked 🔖"
+            );
+          }
+
+          save();
+
+          renderWord(card);
+        }
+      );
   }
+
+  /* -------------------------
+     CONTENT PAGES
+  ------------------------- */
 
   function contentScreen(
     file,
     title,
-    fallbackText
+    text
   ) {
-    const p = imageScreen(file, title);
+    const page =
+      imageScreen(file, title);
+
+    const card =
+      document.createElement("section");
+
+    card.className =
+      "content-card";
+
+    card.innerHTML = `
+      <h1>${title}</h1>
+      <p>${text}</p>
+    `;
+
+    page.appendChild(card);
 
     hit(
-      p,
-      "back-hit",
-      "Back to home",
+      page,
+      "Back",
       0,
       2,
       15,
       8,
-      home
+      home,
+      "back-hit"
     );
 
-    bottomNav(p);
+    bottomNav(page);
 
-    const panel =
-      document.createElement("section");
-
-    panel.className = "content-card";
-
-    panel.innerHTML = `
-      <h1>${title}</h1>
-      <p>${fallbackText}</p>
-    `;
-
-    p.appendChild(panel);
-
-    return p;
+    return page;
   }
 
   function hr() {
@@ -632,16 +943,15 @@
   }
 
   function progress() {
+    const correct =
+      state.history.filter(
+        item => item.correct
+      ).length;
+
     contentScreen(
       screens.progress,
       "My Progress",
-      `${state.xp} XP earned • ${
-        state.history.length
-      } quiz attempts • ${
-        state.history.filter(
-          x => x.correct
-        ).length
-      } correct answers.`
+      `${state.xp} XP earned • ${state.history.length} quiz attempts • ${correct} correct answers.`
     );
   }
 
@@ -663,71 +973,108 @@
     );
   }
 
+  /* -------------------------
+     DRAWER
+  ------------------------- */
+
   function drawer() {
-    const p = imageScreen(
-      screens.drawer,
-      "MindFuel menu"
-    );
+    const page =
+      imageScreen(
+        screens.drawer,
+        "MindFuel Menu"
+      );
+
+    /* Close X */
 
     hit(
-      p,
-      "",
-      "Close menu",
-      78,
+      page,
+      "Close Menu",
+      76,
       2,
-      18,
-      8,
+      20,
+      9,
       home
     );
 
-    const items = [
+    const menuItems = [
       ["Home", home],
       ["Play Quiz", quiz],
       ["HR Radar", hr],
-      ["English Lab", words],
+      ["English Lab", englishLab],
       ["India Now", india],
       ["World Now", world],
       ["My Progress", progress],
-      ["Achievements", achievements],
+      [
+        "Bookmarks",
+        () => {
+          if (
+            state.bookmarks.length === 0
+          ) {
+            toast(
+              "No bookmarks yet"
+            );
+          } else {
+            toast(
+              `${state.bookmarks.length} bookmarked word(s)`
+            );
+          }
+        }
+      ],
+      [
+        "Achievements",
+        achievements
+      ],
       [
         "Settings",
-        () => toast("Settings coming next")
+        () =>
+          toast(
+            "Settings coming soon"
+          )
       ],
       [
         "About MindFuel",
         () =>
           toast(
-            "MindFuel • Created by Neha"
+            "MindFuel • Created by Neha ❤️"
           )
       ]
     ];
 
-    items.forEach((item, i) => {
-      hit(
-        p,
-        "",
-        item[0],
-        8,
-        13 + i * 6.8,
-        82,
-        6,
-        item[1]
-      );
-    });
+    menuItems.forEach(
+      (item, index) => {
+        hit(
+          page,
+          item[0],
+          6,
+          12 + index * 6.4,
+          88,
+          6,
+          item[1]
+        );
+      }
+    );
   }
+
+  /* -------------------------
+     GLOBAL API
+  ------------------------- */
 
   window.MindFuel = {
     home,
     quiz,
-    words,
-    drawer,
+    englishLab,
     hr,
     india,
     world,
     progress,
     achievements,
-    result
+    result,
+    drawer
   };
+
+  /* -------------------------
+     START APP
+  ------------------------- */
 
   splash();
 
