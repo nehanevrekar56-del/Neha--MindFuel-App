@@ -1,0 +1,10 @@
+{
+  "name":"MindFuel — Learn • Think • Grow",
+  "short_name":"MindFuel",
+  "start_url":"./",
+  "display":"standalone",
+  "background_color":"#09051e",
+  "theme_color":"#3f22a8",
+  "orientation":"portrait",
+  "icons":[{"src":"icon.svg","sizes":"any","type":"image/svg+xml"}]
+}
